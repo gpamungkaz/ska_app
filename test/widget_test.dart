@@ -11,20 +11,34 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ska_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('Login flow navigates to marketing home', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Pastikan form login ditampilkan
+    expect(find.text('Selamat Datang'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Isi form login
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'marketing@ska.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'password123',
+    );
+
+    // Tekan tombol login
+    await tester.tap(find.text('Login'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Tunggu animasi loading dan navigasi selesai
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    // Halaman home marketing harus muncul
+    expect(find.text('Marketing Center'), findsOneWidget);
+    expect(find.text('Daftar Customer'), findsOneWidget);
+    expect(find.text('Tambah'), findsOneWidget);
   });
 }

@@ -1,6 +1,6 @@
 
 import 'dart:convert';
-import 'dart:typed_data';
+// dart:typed_data was removed because it's not needed (flutter/foundation covers it)
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +12,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ska_app/widgets/visit_image_view.dart';
 import 'package:ska_app/services/auth_storage.dart';
 import 'package:ska_app/services/api_config.dart';
 import 'login_screen.dart';
@@ -43,7 +44,7 @@ extension DashboardMenuMetadata on DashboardMenu {
   };
 
   String get title => switch (this) {
-    DashboardMenu.visit => 'Visit',
+    DashboardMenu.visit => 'Kunjungan',
     DashboardMenu.customer => 'Customer',
     DashboardMenu.spk => 'SPK',
     DashboardMenu.unitMovement => 'Keluar Masuk Unit',
@@ -373,7 +374,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
 								decoded['success'] == true) {
 							if (!mounted) return;
 							ScaffoldMessenger.of(context).showSnackBar(
-								const SnackBar(content: Text('Visit berhasil disimpan.')),
+								const SnackBar(content: Text('Kunjungan berhasil disimpan.')),
 							);
 							await _fetchVisits();
 						} else {
@@ -708,7 +709,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
 
   String _menuTitle(DashboardMenu menu) {
     if (menu == DashboardMenu.customer) {
-      return 'Visit';
+      return 'Kunjungan';
     }
     return menu.title;
   }
@@ -884,7 +885,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
 					children: [
 						const Expanded(
 							child: Text(
-								'Daftar Visit',
+								'Daftar Kunjungan',
 								style: TextStyle(
 									fontSize: 20,
 									fontWeight: FontWeight.bold,
@@ -1740,7 +1741,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  '${_visits.length} Visit • ${_purchaseOrders.length} SPK',
+                  '${_visits.length} Kunjungan • ${_purchaseOrders.length} SPK',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.black54,
@@ -1996,7 +1997,7 @@ class _VisitCreationOptions extends StatelessWidget {
 				mainAxisSize: MainAxisSize.min,
 				children: [
 					Text(
-						'Buat Visit Baru',
+						'Buat Kunjungan Baru',
 						style: theme.textTheme.titleMedium?.copyWith(
 									fontWeight: FontWeight.w700,
 								) ??
@@ -2607,7 +2608,7 @@ class _ExistingDealerVisitSheetState extends State<_ExistingDealerVisitSheet> {
 			if (selfie == null) {
 				if (!mounted) return;
 				ScaffoldMessenger.of(context).showSnackBar(
-					const SnackBar(content: Text('Selfie dibatalkan. Visit belum disimpan.')),
+					const SnackBar(content: Text('Selfie dibatalkan. Kunjungan belum disimpan.')),
 				);
 				return;
 			}
@@ -2685,7 +2686,7 @@ class _ExistingDealerVisitSheetState extends State<_ExistingDealerVisitSheet> {
 							mainAxisAlignment: MainAxisAlignment.spaceBetween,
 							children: [
 								const Text(
-									'Visit Dealer Lama',
+									'Kunjungan Dealer Lama',
 									style: TextStyle(
 										fontSize: 20,
 										fontWeight: FontWeight.bold,
@@ -2863,7 +2864,7 @@ class _NewDealerVisitSheetState extends State<_NewDealerVisitSheet> {
 			if (selfie == null) {
 				if (!mounted) return;
 				ScaffoldMessenger.of(context).showSnackBar(
-					const SnackBar(content: Text('Selfie dibatalkan. Visit belum disimpan.')),
+					const SnackBar(content: Text('Selfie dibatalkan. Kunjungan belum disimpan.')),
 				);
 				return;
 			}
@@ -2947,7 +2948,7 @@ class _NewDealerVisitSheetState extends State<_NewDealerVisitSheet> {
 								mainAxisAlignment: MainAxisAlignment.spaceBetween,
 								children: [
 									const Text(
-										'Visit Dealer Baru',
+										'Kunjungan Dealer Baru',
 										style: TextStyle(
 											fontSize: 20,
 											fontWeight: FontWeight.bold,
@@ -3393,7 +3394,7 @@ class _VisitDetailSheet extends StatelessWidget {
 											crossAxisAlignment: CrossAxisAlignment.start,
 											children: [
 												Text(
-													'Detail Visit',
+													'Detail Kunjungan',
 													style: theme.textTheme.titleMedium?.copyWith(
 																fontWeight: FontWeight.w700,
 																color: Colors.deepPurple,
@@ -3436,8 +3437,8 @@ class _VisitDetailSheet extends StatelessWidget {
 												),
 												_VisitDetailItem(
 													icon: Icons.calendar_month_outlined,
-													title: 'Tanggal Visit',
-													value: visitDateLabel ?? 'Tanggal visit belum tersedia',
+													title: 'Tanggal Kunjungan',
+													value: visitDateLabel ?? 'Tanggal kunjungan belum tersedia',
 												),
 												_VisitDetailItem(
 													icon: Icons.location_on_outlined,
@@ -3479,7 +3480,7 @@ class _VisitDetailSheet extends StatelessWidget {
 												if (visit.notes != null && visit.notes!.isNotEmpty)
 													_VisitDetailItem(
 														icon: Icons.note_alt_outlined,
-														title: 'Catatan Visit',
+														title: 'Catatan Kunjungan',
 														value: visit.notes!,
 													),
 												if (visit.hasSelfie) ...[
@@ -3621,6 +3622,94 @@ class _VisitSelfieSectionState extends State<_VisitSelfieSection> {
 		_loadImage();
 	}
 
+	Widget _buildWebImageWidget(String cleanUrl) {
+		// Use proxy endpoint to handle CORS
+		// This converts the image URL to a proxy URL that adds CORS headers
+		final proxyUrl = _getProxyUrl(cleanUrl);
+		
+		if (kDebugMode) {
+			print('🔧 [_buildWebImageWidget] Original URL: $cleanUrl');
+			print('🔧 [_buildWebImageWidget] Proxy URL: $proxyUrl');
+		}
+		
+		return Image.network(
+			proxyUrl,
+			fit: BoxFit.contain,
+			filterQuality: FilterQuality.medium,
+			loadingBuilder: (context, child, loadingProgress) {
+				if (loadingProgress == null) return child;
+				
+				// Show progress bar with percentage
+				final progress = loadingProgress.expectedTotalBytes != null
+					? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+					: 0.0;
+				
+				return Center(
+					child: Column(
+						mainAxisAlignment: MainAxisAlignment.center,
+						children: [
+							SizedBox(
+								width: 200,
+								child: LinearProgressIndicator(
+									value: progress,
+									minHeight: 6,
+									backgroundColor: Colors.grey[300],
+									valueColor: AlwaysStoppedAnimation<Color>(
+										Colors.deepPurple.shade400,
+									),
+								),
+							),
+							const SizedBox(height: 12),
+							Text(
+								'${(progress * 100).toStringAsFixed(0)}%',
+								style: const TextStyle(
+									fontSize: 14,
+									fontWeight: FontWeight.w600,
+									color: Colors.deepPurple,
+								),
+							),
+						],
+					),
+				);
+			},
+			errorBuilder: (context, error, stackTrace) {
+				if (kDebugMode) {
+					print('🔧 [Image.network error] Proxy URL: $proxyUrl');
+					print('🔧 [Image.network error] Error: $error');
+					print('🔧 [Image.network error] StackTrace: $stackTrace');
+				}
+				return _VisitPlaceholderCard(
+					icon: Icons.broken_image_outlined,
+					message: 'Foto tidak dapat dimuat.',
+				);
+			},
+		);
+	}
+
+	String _getProxyUrl(String imageUrl) {
+		try {
+			// Extract path dari URL
+			String path = imageUrl;
+			
+			// Jika URL mengandung /storage/, extract path setelah /storage/
+			if (imageUrl.contains('/storage/')) {
+				final parts = imageUrl.split('/storage/');
+				if (parts.length > 1) {
+					path = parts[1];
+				}
+			}
+			
+			// Buat proxy URL menggunakan API base URL
+			final baseUrl = ApiConfig.baseUrl;
+			return '$baseUrl/api/v1/proxy-image?path=$path';
+		} catch (e) {
+			if (kDebugMode) {
+				print('🔧 [_getProxyUrl] Error: $e');
+			}
+			return imageUrl;
+		}
+	}
+
 	Future<void> _loadImage() async {
 		final mediaUrl = widget.visit.selfieUrl ?? widget.visit.selfieThumbnailUrl;
 		if (mediaUrl == null || mediaUrl.isEmpty) {
@@ -3633,6 +3722,15 @@ class _VisitSelfieSectionState extends State<_VisitSelfieSection> {
 
 		// Clean URL: replace invalid characters
 		final cleanUrl = mediaUrl.replaceAll('|', 'l'); // Fix common typo | -> l
+
+		// On web, avoid fetching image bytes via XHR (CORS). Use native <img> instead.
+		if (kIsWeb) {
+			setState(() {
+				_isLoading = false;
+				_errorMessage = null;
+			});
+			return;
+		}
 
 		try {
 			if (kDebugMode) {
@@ -3681,7 +3779,20 @@ class _VisitSelfieSectionState extends State<_VisitSelfieSection> {
 		final timestamp = widget.visit.selfieTakenAtLabel;
 
 		Widget mediaWidget;
-		if (_isLoading) {
+		final mediaUrl = widget.visit.selfieUrl ?? widget.visit.selfieThumbnailUrl;
+		final cleanUrl = mediaUrl?.replaceAll('|', 'l');
+
+		if (kDebugMode) {
+			print('🔧 [_VisitSelfieSection.build] mediaUrl: $mediaUrl');
+			print('🔧 [_VisitSelfieSection.build] cleanUrl: $cleanUrl');
+			print('🔧 [_VisitSelfieSection.build] kIsWeb: $kIsWeb');
+		}
+
+		if (kIsWeb && cleanUrl != null && cleanUrl.isNotEmpty) {
+			// On web, try to load image with CORS handling
+			// First attempt: use Image.network with no-cors mode
+			mediaWidget = _buildWebImageWidget(cleanUrl);
+		} else if (_isLoading) {
 			mediaWidget = const _VisitPhotoLoading();
 		} else if (_imageBytes != null) {
 			mediaWidget = Stack(
@@ -3748,8 +3859,12 @@ class _VisitSelfieSectionState extends State<_VisitSelfieSection> {
 				const SizedBox(height: 12),
 				ClipRRect(
 					borderRadius: BorderRadius.circular(20),
-					child: AspectRatio(
-						aspectRatio: 4 / 3,
+					child: Container(
+						constraints: const BoxConstraints(
+							maxHeight: 600,
+							minHeight: 300,
+						),
+						color: Colors.black12,
 						child: mediaWidget,
 					),
 				),
@@ -3839,7 +3954,7 @@ class _VisitMapSection extends StatelessWidget {
 			crossAxisAlignment: CrossAxisAlignment.start,
 			children: [
 				Text(
-					'Lokasi Visit di Peta',
+					'Lokasi Kunjungan di Peta',
 					style: theme.textTheme.titleMedium?.copyWith(
 								fontWeight: FontWeight.w700,
 							) ??
@@ -4383,7 +4498,7 @@ class _OwnerVisitViewState extends State<_OwnerVisitView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Visit',
+              'Kunjungan',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Row(
@@ -4421,7 +4536,7 @@ class _OwnerVisitViewState extends State<_OwnerVisitView> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Total: ${widget.visitItems.length} Visit',
+          'Total: ${widget.visitItems.length} Kunjungan',
           style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
         const SizedBox(height: 16),
@@ -5811,12 +5926,13 @@ class VisitData {
 		}
 
 		// Fix selfie URLs: if path starts with 'visits/' but doesn't contain '/storage/', add '/storage/'
-		String? _fixSelfieUrl(String? url) {
+		String? fixSelfieUrl(String? url) {
 			if (url == null || mediaBaseUrl == null) return url;
 			if (!url.startsWith(mediaBaseUrl)) return url;
 			final path = url.substring(mediaBaseUrl.length);
-			if (path.startsWith('/visits/') && !path.contains('/storage/')) {
-				final fixed = url.replaceFirst('/visits/', '/storage/visits/');
+			// Handle both /visits/ and visits/ patterns
+			if ((path.startsWith('/visits/') || path.startsWith('visits/')) && !path.contains('/storage/')) {
+				final fixed = url.replaceFirst(RegExp(r'/?visits/'), '/storage/visits/');
 				if (kDebugMode) {
 					print('🔧 Fixed selfie URL: $url -> $fixed');
 				}
@@ -5825,8 +5941,8 @@ class VisitData {
 			return url;
 		}
 
-		final fixedSelfieUrl = _fixSelfieUrl(selfieUrl);
-		final fixedSelfieThumbnailUrl = _fixSelfieUrl(selfieThumbnailUrl);
+		final fixedSelfieUrl = fixSelfieUrl(selfieUrl);
+		final fixedSelfieThumbnailUrl = fixSelfieUrl(selfieThumbnailUrl);
 
 		return VisitData(
 			dealerName: dealerName,
@@ -5882,16 +5998,38 @@ class VisitData {
 		final normalizedBase = baseUrl.trim();
 		try {
 			final baseUri = Uri.parse(normalizedBase);
-			final resolved = baseUri.resolve(trimmed);
+			// Fix: if path starts with 'visits/' but doesn't contain '/storage/', add '/storage/'
+			String pathToResolve = trimmed;
+			if (trimmed.startsWith('visits/') && !trimmed.contains('/storage/')) {
+				pathToResolve = 'storage/$trimmed';
+				if (kDebugMode) {
+					print('🔧 [_resolveUrl] Fixed path: $trimmed -> $pathToResolve');
+				}
+			}
+			final resolved = baseUri.resolve(pathToResolve);
+			if (kDebugMode) {
+				print('🔧 [_resolveUrl] Resolved URL: $resolved');
+			}
 			return resolved.toString();
-		} catch (_) {
+		} catch (e) {
 			final sanitizedBase = normalizedBase.endsWith('/')
 					? normalizedBase.substring(0, normalizedBase.length - 1)
 					: normalizedBase;
-			if (trimmed.startsWith('/')) {
-				return '$sanitizedBase$trimmed';
+			// Fix: if path starts with 'visits/' but doesn't contain '/storage/', add '/storage/'
+			String pathToUse = trimmed;
+			if (trimmed.startsWith('visits/') && !trimmed.contains('/storage/')) {
+				pathToUse = '/storage/$trimmed';
+				if (kDebugMode) {
+					print('🔧 [_resolveUrl] Fixed path (fallback): $trimmed -> $pathToUse');
+				}
 			}
-			return '$sanitizedBase/$trimmed';
+			final result = pathToUse.startsWith('/') 
+				? '$sanitizedBase$pathToUse'
+				: '$sanitizedBase/$pathToUse';
+			if (kDebugMode) {
+				print('🔧 [_resolveUrl] Resolved URL (fallback): $result');
+			}
+			return result;
 		}
 	}
 

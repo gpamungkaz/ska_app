@@ -1,6 +1,8 @@
 
 import 'dart:convert';
 // dart:typed_data was removed because it's not needed (flutter/foundation covers it)
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html show Blob, Url, AnchorElement;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +14,6 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:ska_app/widgets/visit_image_view.dart';
 import 'package:ska_app/services/auth_storage.dart';
 import 'package:ska_app/services/api_config.dart';
 import 'login_screen.dart';
@@ -210,7 +211,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
     } on FormatException {
       if (!mounted) return;
       setState(() {
-        _visitErrorMessage = 'Format data visit tidak valid.';
+        _visitErrorMessage = 'Format data kunjungan tidak valid.';
         _visits = const [];
       });
     } catch (error) {
@@ -379,7 +380,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
 							await _fetchVisits();
 						} else {
 							final message =
-									decoded['message']?.toString() ?? 'Gagal menyimpan visit baru.';
+									decoded['message']?.toString() ?? 'Gagal menyimpan kunjungan baru.';
 							throw _VisitException(message);
 						}
 					} on _VisitException catch (error) {
@@ -1081,7 +1082,7 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
                               color: Colors.transparent,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
-                                onTap: () => _SpkDetailSheet.show(context, order),
+                                onTap: () => _SpkDetailSheet.show(context, order, widget.authToken),
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
@@ -1484,7 +1485,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
 		} on FormatException {
 			if (!mounted) return;
 			setState(() {
-				_visitErrorMessage = 'Format data visit tidak valid.';
+				_visitErrorMessage = 'Format data kunjungan tidak valid.';
 				_visits = const [];
 				_filteredVisits = const [];
 			});
@@ -1661,6 +1662,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
 						_fetchPurchaseOrders(filterType: filterType, customRange: dateRange);
 					},
 					onRefresh: () => _fetchPurchaseOrders(filterType: _spkFilterType, customRange: _spkDateRange),
+					authToken: widget.authToken,
 				);
 			case DashboardMenu.unitMovement:
 				return _OwnerUnitMovementView(unitMovements: _unitMovements);
@@ -1851,7 +1853,7 @@ class _VisitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final addressLabel = visit.dealerAddressLabel;
     final visitDateLabel =
-        visit.visitDateLabel ?? 'Tanggal visit belum tersedia';
+        visit.visitDateLabel ?? 'Tanggal kunjungan belum tersedia';
     final coordinateLabel = visit.coordinateLabel ?? 'Koordinat belum tersedia';
     final customerLabel = visit.customerName;
 	final customerPhone = visit.customerPhone;
@@ -2008,7 +2010,7 @@ class _VisitCreationOptions extends StatelessWidget {
 					),
 					const SizedBox(height: 12),
 					Text(
-						'Pilih tipe dealer untuk proses visit.',
+						'Pilih tipe dealer untuk proses kunjungan.',
 						style: theme.textTheme.bodyMedium?.copyWith(
 									color: Colors.black54,
 								) ??
@@ -2663,7 +2665,7 @@ class _ExistingDealerVisitSheetState extends State<_ExistingDealerVisitSheet> {
 			if (!mounted) return false;
 			ScaffoldMessenger.of(context).showSnackBar(
 				const SnackBar(
-					content: Text('Izin lokasi diperlukan untuk mencatat koordinat visit.'),
+					content: Text('Izin lokasi diperlukan untuk mencatat koordinat kunjungan.'),
 				),
 			);
 			return false;
@@ -3328,7 +3330,7 @@ class _VisitDetailSheet extends StatelessWidget {
 					?..hideCurrentSnackBar()
 					..showSnackBar(
 						const SnackBar(
-							content: Text('Koordinat visit tidak tersedia.'),
+							content: Text('Koordinat kunjungan tidak tersedia.'),
 						),
 					);
 				return;
@@ -4086,7 +4088,7 @@ class _VisitEmptyState extends StatelessWidget {
         Icon(Icons.inbox_outlined, size: 72, color: Colors.black26),
         SizedBox(height: 16),
         Text(
-          'Belum ada data visit tersedia.',
+          'Belum ada data kunjungan tersedia.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 15, color: Colors.black54),
         ),
@@ -4168,7 +4170,7 @@ class VisitSavingIndicator extends StatelessWidget {
 									crossAxisAlignment: CrossAxisAlignment.start,
 									children: [
 										Text(
-											'Sedang menyimpan visit',
+											'Sedang menyimpan kunjungan',
 											style: theme.textTheme.titleSmall?.copyWith(
 														fontWeight: FontWeight.w700,
 														color: Colors.deepPurple,
@@ -4558,13 +4560,13 @@ class _OwnerVisitViewState extends State<_OwnerVisitView> {
                             Icon(Icons.inbox_outlined, size: 72, color: Colors.black26),
                             SizedBox(height: 16),
                             Text(
-                              'Belum ada data visit tersedia.',
+                              'Belum ada data kunjungan tersedia.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 15, color: Colors.black54),
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Coba ubah filter tanggal untuk melihat data visit lainnya.',
+                              'Coba ubah filter tanggal untuk melihat data kunjungan lainnya.',
                               textAlign: TextAlign.center,
                               style: TextStyle(fontSize: 13, color: Colors.black38),
                             ),
@@ -4593,6 +4595,7 @@ class _OwnerSpkView extends StatefulWidget {
     required this.dateRange,
     required this.onFilterChanged,
     required this.onRefresh,
+    required this.authToken,
   });
 
   final List<PurchaseOrderData> spkItems;
@@ -4602,6 +4605,7 @@ class _OwnerSpkView extends StatefulWidget {
   final DateTimeRange? dateRange;
   final void Function(String filterType, DateTimeRange? dateRange) onFilterChanged;
   final VoidCallback onRefresh;
+  final String authToken;
 
   @override
   State<_OwnerSpkView> createState() => _OwnerSpkViewState();
@@ -4735,7 +4739,7 @@ class _OwnerSpkViewState extends State<_OwnerSpkView> {
                           color: Colors.transparent,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () => _SpkDetailSheet.show(context, order),
+                            onTap: () => _SpkDetailSheet.show(context, order, widget.authToken),
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -6466,17 +6470,112 @@ class PurchaseOrderData {
 }
 
 class _SpkDetailSheet extends StatelessWidget {
-	const _SpkDetailSheet({required this.spk});
+	const _SpkDetailSheet({
+		required this.spk,
+		required this.authToken,
+	});
 
 	final PurchaseOrderData spk;
+	final String authToken;
 
-	static Future<void> show(BuildContext context, PurchaseOrderData spk) {
+	static Future<void> show(
+		BuildContext context,
+		PurchaseOrderData spk,
+		String authToken,
+	) {
 		return showModalBottomSheet<void>(
 			context: context,
 			isScrollControlled: true,
 			backgroundColor: Colors.transparent,
-			builder: (context) => _SpkDetailSheet(spk: spk),
+			builder: (context) => _SpkDetailSheet(
+				spk: spk,
+				authToken: authToken,
+			),
 		);
+	}
+
+	Future<void> _exportPdf(BuildContext context) async {
+		final scaffoldMessenger = ScaffoldMessenger.of(context);
+		
+		// Show loading indicator
+		showDialog(
+			context: context,
+			barrierDismissible: false,
+			builder: (context) => const Center(
+				child: CircularProgressIndicator(),
+			),
+		);
+		
+		try {
+			final url = '${ApiConfig.baseUrl}/api/v1/purchase-orders/${spk.id}/export-pdf';
+			final uri = Uri.parse(url);
+			
+			final response = await http.get(
+				uri,
+				headers: {
+					'Accept': 'application/pdf',
+					'Authorization': 'Bearer $authToken',
+				},
+			);
+			
+			// Close loading dialog
+			if (context.mounted) Navigator.of(context).pop();
+			
+			if (response.statusCode == 200) {
+				// For web platform, create a blob URL and trigger download
+				if (kIsWeb) {
+					final blob = html.Blob([response.bodyBytes], 'application/pdf');
+					final blobUrl = html.Url.createObjectUrlFromBlob(blob);
+					final anchor = html.AnchorElement(href: blobUrl)
+						..target = 'blank'
+						..download = 'SPK_${spk.spkNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+					anchor.click();
+					html.Url.revokeObjectUrl(blobUrl);
+					
+					scaffoldMessenger.showSnackBar(
+						const SnackBar(
+							content: Text('PDF berhasil didownload'),
+							backgroundColor: Colors.green,
+						),
+					);
+				} else {
+					// For mobile, use url_launcher to open PDF
+					final launched = await launchUrl(uri);
+					if (!launched) {
+						scaffoldMessenger.showSnackBar(
+							const SnackBar(
+								content: Text('Tidak dapat membuka PDF'),
+								backgroundColor: Colors.red,
+							),
+						);
+					}
+				}
+			} else if (response.statusCode == 401) {
+				scaffoldMessenger.showSnackBar(
+					const SnackBar(
+						content: Text('Sesi Anda telah berakhir. Silakan login kembali.'),
+						backgroundColor: Colors.red,
+					),
+				);
+			} else {
+				scaffoldMessenger.showSnackBar(
+					SnackBar(
+						content: Text('Gagal export PDF: ${response.statusCode}'),
+						backgroundColor: Colors.red,
+					),
+				);
+			}
+		} catch (e) {
+			// Close loading dialog if still open
+			if (context.mounted) Navigator.of(context).pop();
+			
+			scaffoldMessenger.showSnackBar(
+				SnackBar(
+					content: Text('Error: $e'),
+					backgroundColor: Colors.red,
+				),
+			);
+		}
 	}
 
 	@override
@@ -6701,6 +6800,19 @@ class _SpkDetailSheet extends StatelessWidget {
 													icon: Icons.logout_outlined,
 													title: 'Unit Keluar',
 													value: spk.completedAtLabel,
+												),
+												const SizedBox(height: 32),
+												SizedBox(
+													width: double.infinity,
+													child: FilledButton.icon(
+														onPressed: () => _exportPdf(context),
+														icon: const Icon(Icons.picture_as_pdf_outlined),
+														label: const Text('Export PDF'),
+														style: FilledButton.styleFrom(
+															backgroundColor: Colors.orange,
+															padding: const EdgeInsets.symmetric(vertical: 16),
+														),
+													),
 												),
 											],
 										),

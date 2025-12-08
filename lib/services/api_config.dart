@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // TODO: Replace with your actual production API URL
   static const String _devBaseUrl = 'https://ska-local.rupacobacoba.com';
+  // static const String _devBaseUrl = 'https://ska.rupacobacoba.com'; // ← GANTI URL INI!
   static const String _prodBaseUrl = 'https://ska.rupacobacoba.com'; // ← GANTI URL INI!
 
   /// Get the base URL based on current environment

@@ -1,8 +1,4 @@
 import 'dart:convert';
-// dart:typed_data was removed because it's not needed (flutter/foundation covers it)
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show Blob, Url, AnchorElement;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ska_app/services/auth_storage.dart';
 import 'package:ska_app/services/api_config.dart';
+import 'package:ska_app/utils/pdf_helper.dart';
 import 'login_screen.dart';
 
 enum UserRole { marketing, owner }
@@ -7309,14 +7306,9 @@ class _SpkDetailSheet extends StatelessWidget {
       if (response.statusCode == 200) {
         // For web platform, create a blob URL and trigger download
         if (kIsWeb) {
-          final blob = html.Blob([response.bodyBytes], 'application/pdf');
-          final blobUrl = html.Url.createObjectUrlFromBlob(blob);
-          final anchor = html.AnchorElement(href: blobUrl)
-            ..target = 'blank'
-            ..download =
-                'SPK_${spk.spkNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-          anchor.click();
-          html.Url.revokeObjectUrl(blobUrl);
+          final filename =
+              'SPK_${spk.spkNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+          downloadPdfWeb(response.bodyBytes, filename);
 
           scaffoldMessenger.showSnackBar(
             const SnackBar(

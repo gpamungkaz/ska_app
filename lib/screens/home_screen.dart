@@ -991,6 +991,10 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        if (_isSubmittingVisit) ...[
+          const VisitSavingIndicator(),
+          const SizedBox(height: 16),
+        ],
         Expanded(
           child: _isVisitLoading
               ? const Center(child: CircularProgressIndicator())
@@ -1962,12 +1966,8 @@ class _VisitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final addressLabel = visit.dealerAddressLabel;
-    final visitDateLabel =
-        visit.visitDateLabel ?? 'Tanggal kunjungan belum tersedia';
+    final visitDateLabel = visit.visitDateLabel ?? 'Tanggal belum tersedia';
     final coordinateLabel = visit.coordinateLabel ?? 'Koordinat belum tersedia';
-    final customerLabel = visit.customerName;
-    final customerPhone = visit.customerPhone;
 
     return Material(
       color: Colors.transparent,
@@ -1996,7 +1996,9 @@ class _VisitCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      visit.displayDealerName,
+                      visit.isNonVisit
+                          ? (visit.agendaType ?? 'Agenda Non Kunjungan')
+                          : visit.displayDealerName,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -2008,11 +2010,38 @@ class _VisitCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              _VisitMetaRow(
-                icon: Icons.store_mall_directory_outlined,
-                label: addressLabel,
-              ),
-              const SizedBox(height: 8),
+              if (visit.isNonVisit) ...[
+                if (visit.inviterName != null &&
+                    visit.inviterName!.isNotEmpty) ...[
+                  _VisitMetaRow(
+                    icon: Icons.person_outline,
+                    label: 'Pengundang: ${visit.inviterName}',
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (visit.activityDescription != null &&
+                    visit.activityDescription!.isNotEmpty) ...[
+                  _VisitMetaRow(
+                    icon: Icons.description_outlined,
+                    label: visit.activityDescription!,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ] else ...[
+                _VisitMetaRow(
+                  icon: Icons.store_mall_directory_outlined,
+                  label: visit.dealerAddressLabel,
+                ),
+                const SizedBox(height: 8),
+                if (visit.customerName != null &&
+                    visit.customerName!.isNotEmpty) ...[
+                  _VisitMetaRow(
+                    icon: Icons.person_outline,
+                    label: 'Customer: ${visit.customerName}',
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
               _VisitMetaRow(
                 icon: Icons.calendar_today_outlined,
                 label: visitDateLabel,
@@ -2022,20 +2051,6 @@ class _VisitCard extends StatelessWidget {
                 icon: Icons.location_on_outlined,
                 label: coordinateLabel,
               ),
-              if (customerLabel != null && customerLabel.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _VisitMetaRow(
-                  icon: Icons.person_outline,
-                  label: 'Customer: $customerLabel',
-                ),
-              ],
-              if (customerPhone != null && customerPhone.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _VisitMetaRow(
-                  icon: Icons.phone_outlined,
-                  label: 'Telepon: $customerPhone',
-                ),
-              ],
             ],
           ),
         ),
@@ -4034,7 +4049,9 @@ class _VisitDetailSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Detail Kunjungan',
+                          visit.isNonVisit
+                              ? 'Detail Agenda Non Kunjungan'
+                              : 'Detail Kunjungan',
                           style:
                               theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
@@ -4052,7 +4069,9 @@ class _VisitDetailSheet extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                visit.displayDealerName,
+                                visit.isNonVisit
+                                    ? 'Agenda Non Kunjungan'
+                                    : visit.displayDealerName,
                                 style:
                                     theme.textTheme.headlineSmall?.copyWith(
                                       fontSize: 22,
@@ -4072,17 +4091,42 @@ class _VisitDetailSheet extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        _VisitDetailItem(
-                          icon: Icons.store_mall_directory_outlined,
-                          title: 'Alamat Dealer',
-                          value: visit.dealerAddressLabel,
-                        ),
+                        if (!visit.isNonVisit) ...[
+                          _VisitDetailItem(
+                            icon: Icons.store_mall_directory_outlined,
+                            title: 'Alamat Dealer',
+                            value: visit.dealerAddressLabel,
+                          ),
+                        ],
+                        if (visit.isNonVisit) ...[
+                          if (visit.agendaType != null &&
+                              visit.agendaType!.isNotEmpty)
+                            _VisitDetailItem(
+                              icon: Icons.event_outlined,
+                              title: 'Nama Agenda',
+                              value: visit.agendaType!,
+                            ),
+                          if (visit.inviterName != null &&
+                              visit.inviterName!.isNotEmpty)
+                            _VisitDetailItem(
+                              icon: Icons.person_outline,
+                              title: 'Nama Pengundang',
+                              value: visit.inviterName!,
+                            ),
+                          if (visit.activityDescription != null &&
+                              visit.activityDescription!.isNotEmpty)
+                            _VisitDetailItem(
+                              icon: Icons.description_outlined,
+                              title: 'Deskripsi Agenda',
+                              value: visit.activityDescription!,
+                            ),
+                        ],
                         _VisitDetailItem(
                           icon: Icons.calendar_month_outlined,
-                          title: 'Tanggal Kunjungan',
-                          value:
-                              visitDateLabel ??
-                              'Tanggal kunjungan belum tersedia',
+                          title: visit.isNonVisit
+                              ? 'Tanggal Agenda'
+                              : 'Tanggal Kunjungan',
+                          value: visitDateLabel ?? 'Tanggal belum tersedia',
                         ),
                         _VisitDetailItem(
                           icon: Icons.location_on_outlined,
@@ -4126,7 +4170,9 @@ class _VisitDetailSheet extends StatelessWidget {
                         if (visit.notes != null && visit.notes!.isNotEmpty)
                           _VisitDetailItem(
                             icon: Icons.note_alt_outlined,
-                            title: 'Catatan Kunjungan',
+                            title: visit.isNonVisit
+                                ? 'Catatan'
+                                : 'Catatan Kunjungan',
                             value: visit.notes!,
                           ),
                         if (visit.hasSelfie) ...[
@@ -6421,6 +6467,10 @@ class VisitData {
     this.selfieLabel,
     this.selfieTakenAt,
     this.notes,
+    this.visitType,
+    this.agendaType,
+    this.inviterName,
+    this.activityDescription,
   });
 
   final String dealerName;
@@ -6436,6 +6486,10 @@ class VisitData {
   final String? selfieLabel;
   final DateTime? selfieTakenAt;
   final String? notes;
+  final String? visitType;
+  final String? agendaType;
+  final String? inviterName;
+  final String? activityDescription;
 
   String get displayDealerName =>
       dealerName.trim().isEmpty ? 'Dealer tanpa nama' : dealerName;
@@ -6451,6 +6505,12 @@ class VisitData {
   }
 
   bool get hasSelfie => selfieUrl != null && selfieUrl!.isNotEmpty;
+
+  bool get isNonVisit =>
+      visitType != null &&
+      (visitType == 'non_visit' ||
+          visitType == 'nonvisit' ||
+          visitType == 'non visit');
 
   String get selfieDisplayLabel =>
       selfieLabel != null && selfieLabel!.trim().isNotEmpty
@@ -6497,6 +6557,13 @@ class VisitData {
       'photo_data',
       'media',
       'visit_selfie',
+    ]);
+
+    final agendaMap = _findMap(json, [
+      'agenda',
+      'agenda_data',
+      'event',
+      'event_data',
     ]);
 
     final dealerName =
@@ -6680,6 +6747,46 @@ class VisitData {
       ]),
     );
 
+    final visitType = _clean(
+      _readString(json, ['visit_type', 'visitType', 'type', 'agenda_type']),
+    );
+
+    // For non_visit: get agenda name from agenda object
+    final agendaType = _clean(
+      _readString(agendaMap, ['name', 'agenda_name', 'title']) ??
+          _readString(json, [
+            'agenda_type_name',
+            'agendaType',
+            'agenda_name',
+            'jenis_agenda',
+            'event_type',
+          ]),
+    );
+
+    // For non_visit: get inviting_name
+    final inviterName = _clean(
+      _readString(json, [
+        'inviting_name',
+        'inviter_name',
+        'inviterName',
+        'nama_pengundang',
+        'host_name',
+        'organizer_name',
+      ]),
+    );
+
+    // For non_visit: get agenda_description
+    final activityDescription = _clean(
+      _readString(json, [
+            'agenda_description',
+            'activity_description',
+            'activityDescription',
+            'keterangan_kegiatan',
+            'event_description',
+          ]) ??
+          _readString(agendaMap, ['description', 'agenda_description']),
+    );
+
     final selfieUrl = _resolveUrl(selfieUrlRaw, baseUrl: mediaBaseUrl);
     final selfieThumbnailUrl = _resolveUrl(
       selfieThumbnailRaw,
@@ -6730,6 +6837,10 @@ class VisitData {
       selfieLabel: selfieLabel,
       selfieTakenAt: selfieTakenAt,
       notes: notes,
+      visitType: visitType,
+      agendaType: agendaType,
+      inviterName: inviterName,
+      activityDescription: activityDescription,
     );
   }
 

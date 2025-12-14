@@ -11,17 +11,18 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ska_app/services/auth_storage.dart';
 import 'package:ska_app/services/api_config.dart';
-import 'package:ska_app/utils/pdf_helper.dart';
+import 'package:ska_app/screens/sprinter_screen.dart';
 import 'login_screen.dart';
 
-enum UserRole { marketing, owner }
+enum UserRole { marketing, owner, sprinter }
 
-enum DashboardMenu { visit, spk, customer, unitMovement }
+enum DashboardMenu { visit, spk, customer, unitMovement, attendance, deposit }
 
 extension UserRoleLabel on UserRole {
   String get displayName => switch (this) {
     UserRole.marketing => 'Marketing',
     UserRole.owner => 'Owner',
+    UserRole.sprinter => 'Sprinter',
   };
 }
 
@@ -31,6 +32,8 @@ extension DashboardMenuMetadata on DashboardMenu {
     DashboardMenu.customer => Icons.groups_outlined,
     DashboardMenu.spk => Icons.assignment_outlined,
     DashboardMenu.unitMovement => Icons.local_shipping_outlined,
+    DashboardMenu.attendance => Icons.fingerprint_outlined,
+    DashboardMenu.deposit => Icons.account_balance_wallet_outlined,
   };
 
   Color get accentColor => switch (this) {
@@ -38,6 +41,8 @@ extension DashboardMenuMetadata on DashboardMenu {
     DashboardMenu.customer => Colors.deepPurple,
     DashboardMenu.spk => Colors.orange,
     DashboardMenu.unitMovement => Colors.teal,
+    DashboardMenu.attendance => Colors.green,
+    DashboardMenu.deposit => Colors.indigo,
   };
 
   String get title => switch (this) {
@@ -45,6 +50,8 @@ extension DashboardMenuMetadata on DashboardMenu {
     DashboardMenu.customer => 'Customer',
     DashboardMenu.spk => 'SPK',
     DashboardMenu.unitMovement => 'Keluar Masuk Unit',
+    DashboardMenu.attendance => 'Presensi',
+    DashboardMenu.deposit => 'Setoran',
   };
 
   String get subtitle => switch (this) {
@@ -52,6 +59,8 @@ extension DashboardMenuMetadata on DashboardMenu {
     DashboardMenu.customer => 'Kelola relasi pelanggan',
     DashboardMenu.spk => 'Pantau proses SPK',
     DashboardMenu.unitMovement => 'Lihat pergerakan unit',
+    DashboardMenu.attendance => 'Kelola presensi karyawan',
+    DashboardMenu.deposit => 'Kelola setoran harian',
   };
 }
 
@@ -119,6 +128,8 @@ class HomeScreen extends StatelessWidget {
         return MarketingHomeScreen(authToken: authToken, userName: userName);
       case UserRole.owner:
         return OwnerHomeScreen(userName: userName, authToken: authToken);
+      case UserRole.sprinter:
+        return SprinterHomeScreen(userName: userName ?? 'Sprinter', authToken: authToken);
     }
   }
 }
@@ -940,6 +951,9 @@ class _MarketingHomeScreenState extends State<MarketingHomeScreen> {
         return _buildSpkContent();
       case DashboardMenu.unitMovement:
         return _buildUnitMovementContent();
+      case DashboardMenu.attendance:
+      case DashboardMenu.deposit:
+        return const SizedBox.shrink(); // Not applicable for marketing
     }
   }
 
@@ -1782,6 +1796,9 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
         );
       case DashboardMenu.unitMovement:
         return _OwnerUnitMovementView(unitMovements: _unitMovements);
+      case DashboardMenu.attendance:
+      case DashboardMenu.deposit:
+        return const SizedBox.shrink(); // Not applicable for owner
     }
   }
 
@@ -7386,82 +7403,6 @@ class _SpkDetailSheet extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => _SpkDetailSheet(spk: spk, authToken: authToken),
     );
-  }
-
-  Future<void> _exportPdf(BuildContext context) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final url =
-          '${ApiConfig.baseUrl}/api/v1/purchase-orders/${spk.id}/export-pdf';
-      final uri = Uri.parse(url);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/pdf',
-          'Authorization': 'Bearer $authToken',
-        },
-      );
-
-      // Close loading dialog
-      if (context.mounted) Navigator.of(context).pop();
-
-      if (response.statusCode == 200) {
-        // For web platform, create a blob URL and trigger download
-        if (kIsWeb) {
-          final filename =
-              'SPK_${spk.spkNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-          downloadPdfWeb(response.bodyBytes, filename);
-
-          scaffoldMessenger.showSnackBar(
-            const SnackBar(
-              content: Text('PDF berhasil didownload'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          // For mobile, use url_launcher to open PDF
-          final launched = await launchUrl(uri);
-          if (!launched) {
-            scaffoldMessenger.showSnackBar(
-              const SnackBar(
-                content: Text('Tidak dapat membuka PDF'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        }
-      } else if (response.statusCode == 401) {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Sesi Anda telah berakhir. Silakan login kembali.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } else {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Gagal export PDF: ${response.statusCode}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      // Close loading dialog if still open
-      if (context.mounted) Navigator.of(context).pop();
-
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    }
   }
 
   @override

@@ -64,6 +64,8 @@ class _SplashScreenState extends State<SplashScreen> {
         return UserRole.marketing;
       case 'owner':
         return UserRole.owner;
+      case 'sprinter':
+        return UserRole.sprinter;
       default:
         return null;
     }
